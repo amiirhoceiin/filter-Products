@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import CategoriesFilter from './components/CategoriesFilter';
-import data from './db.json';
+import dataJson from './db.json';
 import ProductList from './components/ProductList';
 import OptionFilter from './components/OptionFilter';
-
 
 interface Product {
   ID: number;
@@ -14,11 +13,6 @@ interface Product {
     Filter: number;
     Option: number;
   }[];
-}
-
-interface FilterOption {
-  FilterID: number;
-  OptionID: number;
 }
 
 interface Filter {
@@ -35,12 +29,24 @@ interface Category {
   Name: string;
 }
 
+interface DataType {
+  Data: {
+    Products: Product[];
+    Filters: Filter[];
+    Categories: Category[];
+  };
+}
+
+type SelectedFiltersType = Record<number, number[]>;
+
+const data = dataJson as unknown as DataType;
+
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<FilterOption[]>([]); 
+  const [selectedFilter, setSelectedFilter] = useState<SelectedFiltersType>({});
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number[]>([]); 
+  const [selectedCategory, setSelectedCategory] = useState<number[]>([]);
 
   useEffect(() => {
     const { Products, Filters, Categories } = data.Data;
@@ -49,7 +55,6 @@ function App() {
     setCategories(Categories);
   }, []);
 
-  
   const handleCategoryChange = (categoryID: number) => {
     setSelectedCategory((prevSelectedCategory) => {
       if (prevSelectedCategory.includes(categoryID)) {
@@ -60,47 +65,41 @@ function App() {
     });
   };
 
-  
   const handleFilterChange = (filterID: number, optionID: number) => {
-    setSelectedFilter((prev: any) => {
+    setSelectedFilter((prev: SelectedFiltersType) => {
       const options = prev[filterID] || [];
-  
+
       if (options.includes(optionID)) {
-       
-        const newOptions = options.filter((id: number) => id !== optionID);
-  
+        const newOptions = options.filter((id) => id !== optionID);
+
         if (newOptions.length === 0) {
-         
           const { [filterID]: _, ...rest } = prev;
           return rest;
         } else {
           return { ...prev, [filterID]: newOptions };
         }
       } else {
-       
         return { ...prev, [filterID]: [...options, optionID] };
       }
     });
   };
-  
 
   const filteredProducts = products.filter((product) => {
     const categoryMatch =
       selectedCategory.length === 0 || selectedCategory.includes(product.CategoryID);
-  
+
     const filterMatch =
       Object.keys(selectedFilter).length === 0 ||
       Object.entries(selectedFilter).every(([filterID, optionIDs]) =>
         product.Filters.some(
-          (filter: { Filter: number; Option: number }) =>
-            filter.Filter === Number(filterID) && optionIDs.includes(filter.Option)
+          (filter) =>
+            filter.Filter === Number(filterID) &&
+            optionIDs.includes(filter.Option)
         )
       );
-  
+
     return categoryMatch && filterMatch;
   });
-  
-  
 
   return (
     <div className="min-h-screen flex">
@@ -108,7 +107,7 @@ function App() {
         <h1 className="text-2xl font-bold p-5">Product List</h1>
 
         <div className="p-7 border-b-2">
-          <CategoriesFilter 
+          <CategoriesFilter
             categories={categories}
             selectedCategory={selectedCategory}
             onCategoryChange={handleCategoryChange}
